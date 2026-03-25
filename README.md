@@ -8,7 +8,7 @@
 
 ## Overview
 
-**NEST3D** is an open-access, 1.4 TB multimodal drone dataset of sociable weaver (*Philetairus socius*) nest-bearing trees, collected at the Kuzikus Wildlife Reserve, Namibia. It is the first publicly available dataset to provide expert-annotated 3D point clouds specifically targeting the fine-grained structural segmentation of birds nests embedded in complex tree canopies.
+**NEST3D** is an open-access, 1.4 TB multimodal drone dataset of sociable weaver (*Philetairus socius*) nest-bearing trees, collected at the Kuzikus Wildlife Reserve, Namibia. It is the first publicly available dataset to provide expert-annotated 3D point clouds specifically targeting the fine-grained structural segmentation of animal-built nests embedded in complex tree canopies.
 
 The dataset bridges computational ecology and computer vision, enabling applications from automated nest volume estimation to species habitat monitoring.
 
@@ -81,7 +81,7 @@ NEST3D/
 ### 1. Clone this repository
 
 ```bash
-git clone https://github.com/camolina2/NEST3D-BENCHMARK
+git clone https://github.com/camolina2/nest3d-benchmark
 cd NEST3D
 ```
 
@@ -94,7 +94,52 @@ conda activate nest3d
 
 ### 3. Download the dataset
 
-The dataset is hosted on Hugging Face. You can download it using the `huggingface_hub` library:
+The dataset is hosted on Hugging Face (~1.4 TB total). Each sample is packaged as a `.tar.gz` archive (~8 GB each). **We strongly recommend downloading one sample at a time** rather than the full dataset.
+
+> 📦 Dataset structure on HuggingFace:
+> ```
+> train/sample001.tar.gz   # ~8 GB each, 83 training samples
+> train/sample002.tar.gz
+> ...
+> test/sample101.tar.gz    # ~8 GB each, 21 test samples
+> ...
+> ```
+
+#### Option 1: Download a single sample (recommended)
+
+```python
+from huggingface_hub import hf_hub_download
+import tarfile, os
+
+# Download one sample archive
+hf_hub_download(
+    repo_id="NEST3D/dataset",
+    repo_type="dataset",
+    filename="train/sample001.tar.gz",  # change sample number as needed
+    local_dir="./data"
+)
+
+# Extract it
+with tarfile.open("./data/train/sample001.tar.gz", "r:gz") as tar:
+    tar.extractall(path="./data/train/sample001/")
+```
+
+#### Option 2: Download only the annotated point clouds (lightweight)
+
+If you only need the 3D point clouds for training (no images), download individual `.npy` files — these are much smaller than the full archives:
+
+```python
+from huggingface_hub import hf_hub_download
+
+hf_hub_download(
+    repo_id="NEST3D/dataset",
+    repo_type="dataset",
+    filename="train/sample001/sample001.npy",  # ~50-200 MB per file
+    local_dir="./data"
+)
+```
+
+#### Option 3: Download the full dataset (requires ~1.4 TB free disk space)
 
 ```python
 from huggingface_hub import snapshot_download
@@ -106,7 +151,7 @@ snapshot_download(
 )
 ```
 
-Or browse and download individual files at:  
+Or browse and download individual files directly at:  
 👉 [https://huggingface.co/datasets/NEST3D/dataset](https://huggingface.co/datasets/NEST3D/dataset)
 
 ### 4. Load a point cloud
@@ -175,9 +220,9 @@ Pre-trained checkpoints are available for download on Hugging Face:
 
 | Model | mIoU | Download |
 |---|---|---|
-| PT-v3 | 86.35% | 🤗 [nest3d-ptv3.pth](https://huggingface.co/NEST3D)  |
-| RandLA-Net | 50.72% | 🤗 [nest3d-randlanet.pth](https://huggingface.co/NEST3D) |
-| KPConv | 16.40% | 🤗 [nest3d-kpconv.pth](https://huggingface.co/NEST3D)  |
+| PT-v3 | 86.35% | 🤗 [nest3d-ptv3.pth](https://huggingface.co/NEST3D) *(coming soon)* |
+| RandLA-Net | 50.72% | 🤗 [nest3d-randlanet.pth](https://huggingface.co/NEST3D) *(coming soon)* |
+| KPConv | 16.40% | 🤗 [nest3d-kpconv.pth](https://huggingface.co/NEST3D) *(coming soon)* |
 
 ---
 
@@ -204,14 +249,14 @@ Data collection was conducted with official permission from Kuzikus Wildlife Res
 If you use NEST3D in your research, please cite:
 
 ```bibtex
-@inproceedings{,
+@inproceedings{molinacatricheo2026nest3d,
   title     = {NEST3D: A High-Resolution Multimodal Dataset of Sociable Weaver Tree Nests},
   author    = {Molina Catricheo, Constanza A. and Boeder, Simon and Guo, Ting-Jia and
                May, Giacomo and Berthelot, Cl{\'e}ment and Tuia, Devis and
                Reinhard, Friedrich F. and Remondino, Fabio and Risse, Benjamin},
-  booktitle = {},
+  booktitle = {Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining},
   year      = {2026},
-  address   = {}
+  address   = {Jeju, South Korea}
 }
 ```
 

@@ -1,0 +1,7 @@
+*.pth
+*.ckpt
+*.npy
+data/
+__pycache__/
+*.pyc
+.DS_Store

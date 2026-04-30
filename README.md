@@ -226,9 +226,9 @@ Pre-trained checkpoints are available on Hugging Face:
 
 | Model | mIoU | Download |
 |---|---|---|
-| PT-v3 | 86.35% | [NEST3D/nest3d-ptv3](https://huggingface.co/NEST3D/nest3d-ptv3) |
-| RandLA-Net | 50.72% | [NEST3D/nest3d-randlanet](https://huggingface.co/NEST3D/nest3d-randlanet) |
-| KPConv | 16.40% | [NEST3D/nest3d-kpconv](https://huggingface.co/NEST3D/nest3d-kpconv) |
+| PT-v3 | 86.35% | [NEST3D/nest3d-ptv3](https://huggingface.co/NEST3D/nest3d-ptv3/tree/main) |
+| RandLA-Net | 50.72% | [NEST3D/nest3d-randlanet](https://huggingface.co/NEST3D/nest3d-randlanet/tree/main) |
+| KPConv | 16.40% | [NEST3D/nest3d-kpconv](https://huggingface.co/NEST3D/nest3d-kpconv/tree/main) |
 
 ## Data Collection
 

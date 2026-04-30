@@ -1,10 +1,14 @@
 # NEST3D: A High-Resolution Multimodal Dataset of Sociable Weaver Tree Nests
 
-> 📄 **Paper under review** — KDD 2026  
 > 🤗 **Dataset:** [huggingface.co/datasets/NEST3D/dataset](https://huggingface.co/datasets/NEST3D/dataset)  
+> 📄 **Paper:** [arXiv (coming soon)]()  
 > 🐦 **Task:** 3D Point Cloud Semantic Segmentation
 
 ---
+
+# NEST3D: A High-Resolution Multimodal Dataset of Sociable Weaver Tree Nests
+
+![NEST3D Workflow](workflow_nest3d.png)
 
 ## Overview
 
@@ -48,51 +52,42 @@ We evaluate three state-of-the-art 3D semantic segmentation architectures on the
 
 ---
 
-## Repository Structure
+## Training Configurations
 
-```
-NEST3D/
-├── README.md
-├── LICENSE
-├── environment.yml              # Conda environment for reproducibility
-│
-├── configs/                     # Training configuration files
-│   ├── ptv3_nest3d.py           # PT-v3 config
-│   ├── randlanet_nest3d.yml     # RandLA-Net config
-│   └── kpconv_nest3d.yml        # KPConv config
-│
-├── scripts/                     # Training & evaluation scripts
-│   ├── train_ptv3.py
-│   ├── train_randlanet.py
-│   ├── train_kpconv.py
-│   └── evaluate.py
-│
-├── checkpoints/
-│   └── README.md                # Links to trained model weights (HuggingFace)
-│
-└── results/
-    └── metrics.csv              # Full per-class and per-scene results
-```
+### PT-v3
+- **Optimizer:** AdamW (LR: 0.006, weight decay: 0.05)
+- **Scheduler:** OneCycleLR
+- **Epochs:** 100
+- **Batch size:** 4
+- **Loss:** Cross-entropy (nest class weight: 4×) + Lovász loss (weight: 0.5)
+- **Voxel grid size:** 0.008
+- **Point crop:** 50,000 (random)
+- **Input features:** XYZ + RGB (6 channels)
+
+### RandLA-Net
+- **Optimizer:** Adam (LR: 0.001)
+- **Epochs:** 100
+- **Batch size:** 4
+- **Layers:** 3 (32 nearest neighbors)
+- **Subsampling ratios:** [1, 1, 2]
+- **Class-balanced sampling weights:** [1, 3, 1]
+
+### KPConv
+- **Optimizer:** Adam (LR: 0.001, weight decay: 0.0005)
+- **Epochs:** 200
+- **Batch size:** 6
+- **Scheduler:** Exponential decay (gamma: 0.99)
+- **First subsampling:** 0.01
+- **Input radius:** 0.2
+- **Convolution radius:** 0.08
+- **Kernel points:** 50
+- **Layers:** 3
+
+> **Note:** KPConv collapsed to the majority class (Grass) on this dataset, achieving 0% IoU for both Nest and Tree classes. This result highlights the challenges that extreme class imbalance and non-uniform point distributions in ecological data pose for rigid kernel convolution approaches.
 
 ---
 
-## Getting Started
-
-### 1. Clone this repository
-
-```bash
-git clone https://github.com/camolina2/nest3d-benchmark
-cd NEST3D
-```
-
-### 2. Set up the environment
-
-```bash
-conda env create -f environment.yml
-conda activate nest3d
-```
-
-### 3. Download the dataset
+## Download the Dataset
 
 The dataset is hosted on Hugging Face (~1.4 TB total). Each sample is packaged as a `.tar.gz` archive (~8 GB each). **We strongly recommend downloading one sample at a time** rather than the full dataset.
 
@@ -105,7 +100,7 @@ The dataset is hosted on Hugging Face (~1.4 TB total). Each sample is packaged a
 > ...
 > ```
 
-#### Option 1: Download a single sample (recommended)
+### Option 1: Download a single sample (recommended)
 
 ```python
 from huggingface_hub import hf_hub_download
@@ -124,7 +119,7 @@ with tarfile.open("./data/train/sample001.tar.gz", "r:gz") as tar:
     tar.extractall(path="./data/train/sample001/")
 ```
 
-#### Option 2: Download only the annotated point clouds (lightweight)
+### Option 2: Download only the annotated point clouds (lightweight)
 
 If you only need the 3D point clouds for training (no images), download individual `.npy` files — these are much smaller than the full archives:
 
@@ -139,7 +134,7 @@ hf_hub_download(
 )
 ```
 
-#### Option 3: Download the full dataset (requires ~1.4 TB free disk space)
+### Option 3: Download the full dataset (requires ~1.4 TB free disk space)
 
 ```python
 from huggingface_hub import snapshot_download
@@ -154,7 +149,11 @@ snapshot_download(
 Or browse and download individual files directly at:  
 👉 [https://huggingface.co/datasets/NEST3D/dataset](https://huggingface.co/datasets/NEST3D/dataset)
 
-### 4. Load a point cloud
+---
+
+## Load and Visualize
+
+### Load a point cloud
 
 Each scene is stored as a `.npy` file with columns `[x, y, z, r, g, b, label]`.
 
@@ -164,65 +163,66 @@ import numpy as np
 # Load a training scene
 pc = np.load("data/train/sample_012/sample012.npy")
 
-xyz   = pc[:, :3]          # 3D coordinates (meters, local Euclidean frame)
-rgb   = pc[:, 3:6]         # RGB color values, scaled to [0, 1]
-label = pc[:, 6].astype(int)  # 0=Grass, 1=Nest, 2=Tree
+xyz   = pc[:, :3]              # 3D coordinates (meters, local Euclidean frame)
+rgb   = pc[:, 3:6]             # RGB color values, scaled to [0, 1]
+label = pc[:, 6].astype(int)   # 0=Grass, 1=Nest, 2=Tree
 
 print(f"Points: {len(pc):,} | Classes: {np.unique(label)}")
 ```
 
----
+### Visualize a point cloud
 
-## Reproducing Our Results
+```python
+import open3d as o3d
+import numpy as np
 
-### Point Transformer V3 (PT-v3)
-
-We use the [official PT-v3 implementation](https://github.com/Pointcept/PointTransformerV3).
-
-```bash
-# Clone PT-v3
-git clone https://github.com/Pointcept/PointTransformerV3.git
-cd PointTransformerV3
-
-# Copy our config
-cp ../configs/ptv3_nest3d.py configs/
-
-# Train
-python tools/train.py --config configs/ptv3_nest3d.py
-
-# Evaluate
-python tools/test.py --config configs/ptv3_nest3d.py --checkpoint <path_to_checkpoint>
+pc = np.load("data/train/sample_012/sample012.npy")
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(pc[:, :3])
+pcd.colors = o3d.utility.Vector3dVector(pc[:, 3:6])
+o3d.visualization.draw_geometries([pcd])
 ```
 
-### RandLA-Net & KPConv
+### Visualize with semantic labels
 
-We use the [Open3D-ML implementations](https://github.com/isl-org/Open3D-ML).
+```python
+import open3d as o3d
+import numpy as np
 
-```bash
-# Clone Open3D-ML
-git clone https://github.com/isl-org/Open3D-ML.git
-cd Open3D-ML
+pc = np.load("data/train/sample_012/sample012.npy")
+labels = pc[:, 6].astype(int)
 
-# RandLA-Net
-python scripts/run_pipeline.py torch -c ../configs/randlanet_nest3d.yml --split train
-python scripts/run_pipeline.py torch -c ../configs/randlanet_nest3d.yml --split test
+# Color map: Grass=green, Nest=red, Tree=brown
+color_map = {
+    0: [0.18, 0.80, 0.44],  # Grass
+    1: [0.91, 0.30, 0.24],  # Nest
+    2: [0.55, 0.27, 0.07],  # Tree
+}
+colors = np.array([color_map[l] for l in labels])
 
-# KPConv
-python scripts/run_pipeline.py torch -c ../configs/kpconv_nest3d.yml --split train
-python scripts/run_pipeline.py torch -c ../configs/kpconv_nest3d.yml --split test
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(pc[:, :3])
+pcd.colors = o3d.utility.Vector3dVector(colors)
+o3d.visualization.draw_geometries([pcd])
 ```
 
 ---
 
-## Trained Model Weights
+## Models and Implementations
 
-Pre-trained checkpoints are available for download on Hugging Face:
+We benchmark three architectures. The implementations and repositories used are:
 
-| Model | mIoU | Download |
+| Model | Repository | Framework |
 |---|---|---|
-| PT-v3 | 86.35% | 🤗 [nest3d-ptv3.pth](https://huggingface.co/NEST3D) *(coming soon)* |
-| RandLA-Net | 50.72% | 🤗 [nest3d-randlanet.pth](https://huggingface.co/NEST3D) *(coming soon)* |
-| KPConv | 16.40% | 🤗 [nest3d-kpconv.pth](https://huggingface.co/NEST3D) *(coming soon)* |
+| PT-v3 | [Pointcept](https://github.com/Pointcept/Pointcept) | PyTorch |
+| RandLA-Net | [Open3D-ML](https://github.com/isl-org/Open3D-ML) | PyTorch |
+| KPConv | [Open3D-ML](https://github.com/isl-org/Open3D-ML) | PyTorch |
+
+Training configurations and hyperparameters are detailed in the [Training Configurations](#training-configurations) section above. Custom dataset loaders and config files for reproducing our experiments will be released in this repository.
+
+## Model Weights
+
+Pre-trained checkpoints will be released soon on [Hugging Face](https://huggingface.co/NEST3D).
 
 ---
 
@@ -249,22 +249,29 @@ Data collection was conducted with official permission from Kuzikus Wildlife Res
 If you use NEST3D in your research, please cite:
 
 ```bibtex
-@inproceedings{molinacatricheo2026nest3d,
-  title     = {NEST3D: A High-Resolution Multimodal Dataset of Sociable Weaver Tree Nests},
-  author    = {Molina Catricheo, Constanza A. and Boeder, Simon and Guo, Ting-Jia and
-               May, Giacomo and Berthelot, Cl{\'e}ment and Tuia, Devis and
-               Reinhard, Friedrich F. and Remondino, Fabio and Risse, Benjamin},
-  booktitle = {Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining},
-  year      = {2026},
-  address   = {Jeju, South Korea}
+@article{molinacatricheo2026nest3d,
+  title={NEST3D: A High-Resolution Multimodal Dataset of Sociable Weaver Tree Nests},
+  author={Molina Catricheo, Constanza A. and Boeder, Simon and Guo, Ting-Jia and May, Giacomo and Berthelot, Cl\'{e}ment and Tuia, Devis and Reinhard, Friedrich F. and Remondino, Fabio and Risse, Benjamin},
+  journal={arXiv preprint},
+  year={2026}
 }
 ```
+
+> 📌 The arXiv ID will be updated once the preprint is published.
 
 ---
 
 ## Acknowledgements
 
 This work was funded by the European Union's Horizon Europe programme through the Marie Skłodowska-Curie project **WildDrone** (grant no. 101071224), the EPSRC grant **Autonomous Drones for Nature Conservation Missions** (EP/X029077/1), and the Swiss State Secretariat for Education, Research and Innovation (SERI, contract no. 22.00280).
+
+---
+
+## Contact
+
+For questions about the dataset or benchmark, please contact:
+- **Constanza A. Molina Catricheo** — cmolinac@uni-muenster.de
+- **Benjamin Risse** — b.risse@uni-muenster.de
 
 ---
 

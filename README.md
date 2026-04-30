@@ -222,9 +222,13 @@ Training configurations and hyperparameters are detailed in the [Training Config
 
 ## Model Weights
 
-Pre-trained checkpoints will be released soon on [Hugging Face](https://huggingface.co/NEST3D).
+Pre-trained checkpoints are available on Hugging Face:
 
----
+| Model | mIoU | Download |
+|---|---|---|
+| PT-v3 | 86.35% | [NEST3D/nest3d-ptv3](https://huggingface.co/NEST3D/nest3d-ptv3) |
+| RandLA-Net | 50.72% | [NEST3D/nest3d-randlanet](https://huggingface.co/NEST3D/nest3d-randlanet) |
+| KPConv | 16.40% | [NEST3D/nest3d-kpconv](https://huggingface.co/NEST3D/nest3d-kpconv) |
 
 ## Data Collection
 
